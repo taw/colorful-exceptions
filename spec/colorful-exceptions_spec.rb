@@ -4,18 +4,19 @@ describe ColorfulExceptions do
   let(:e) { "\e[0m" }
 
   it "prints colorful exceptions" do
-    exception = (eval("1.times{\n1/0\n}", nil, "/lib/test.rb", 1) rescue $!)
+    # Only frames from the eval'd source are checked. Frames above it name the
+    # enclosing rspec block, and frames for core methods may live in Ruby
+    # internals (`Integer#times` moved to <internal:numeric> in ruby 3.3).
+    source = "def inner\n1/0\nend\ndef outer\ninner\nend\nouter\n"
+    exception = (eval(source, nil, "/lib/test.rb", 1) rescue $!)
     expect(exception.backtrace[0]).to eq(
       "#{g}/lib/test.rb#{e}:#{g}2#{e}: in `#{c}/#{e}'"
     )
     expect(exception.backtrace[1]).to eq(
-      "#{g}/lib/test.rb#{e}:#{g}2#{e}: in `#{c}block (3 levels) in <top (required)>#{e}'"
+      "#{g}/lib/test.rb#{e}:#{g}2#{e}: in `#{c}inner#{e}'"
     )
     expect(exception.backtrace[2]).to eq(
-      "#{g}/lib/test.rb#{e}:#{g}1#{e}: in `#{c}times#{e}'"
-    )
-    expect(exception.backtrace[3]).to eq(
-      "#{g}/lib/test.rb#{e}:#{g}1#{e}: in `#{c}block (2 levels) in <top (required)>#{e}'"
+      "#{g}/lib/test.rb#{e}:#{g}5#{e}: in `#{c}outer#{e}'"
     )
   end
 
